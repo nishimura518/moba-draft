@@ -150,7 +150,52 @@ php artisan view:cache
 
 ---
 
-## 10. 次のアクション（最短）
+## 10. Render.com で Web Service を作る場合（重要）
+
+Render の **New Web Service** はリポジトリを検出すると **Node / `yarn build`** を自動提案しますが、このプロジェクトは **Laravel（PHP）** です。**Node のままでは動きません。**
+
+### ダッシュボードで選ぶこと
+
+| 項目 | 設定 |
+|------|------|
+| **Language / Environment** | **Docker**（「Node」ではない） |
+| **Branch** | `main`（利用中のブランチ） |
+| **Root Directory** | 空欄（モノレポでない限り） |
+| **Build Command** | **空欄**（Dockerfile でビルドするため。Node 用の `yarn install; yarn build` は削除） |
+| **Start Command** | **空欄**（`Dockerfile` の `CMD` が使われます） |
+
+リポジトリには **`Dockerfile`** と **`scripts/00-laravel-deploy.sh`** を追加済みです（[Render の Laravel + Docker 手順](https://render.com/docs/deploy-php-laravel-docker) と同系統の nginx-php-fpm イメージ）。Vite 用に **マルチステージビルド**で `npm run build` も実行します。
+
+### データベース
+
+- Render 上で **PostgreSQL** を新規作成し、**Internal Database URL** を Web Service の環境変数に渡します。
+- Web Service の **Environment** に少なくとも次を設定します。
+
+| 変数名 | 例・説明 |
+|--------|----------|
+| `APP_KEY` | ローカルで `php artisan key:generate --show` の出力（`base64:...`） |
+| `APP_ENV` | `production` |
+| `APP_DEBUG` | `false` |
+| `APP_URL` | `https://（Render が付与するドメイン）` |
+| `DB_CONNECTION` | `pgsql` |
+| `DATABASE_URL` | Render の Postgres の **Internal** URL（ダッシュボードからコピー） |
+| `TRUSTED_PROXIES` | `*`（Render のプロキシ経由で HTTPS を正しく扱うため） |
+| `SESSION_DRIVER` | `database` のままなら、マイグレーションで `sessions` テーブルが作成されます |
+| `SESSION_SECURE_COOKIE` | `true` |
+
+※ `config/database.php` では PostgreSQL の接続 URL に **`DATABASE_URL`** を解釈できるようにしてあります。
+
+### スケジューラ（期限切れ部屋の削除）
+
+`schedule:run` を毎分動かすには、Render の **Cron Job** や **別ワーカー**で `php artisan schedule:run` / `schedule:work` を実行する必要があります。最小構成では手動で `php artisan rooms:prune-expired` を実行する方法もあります。運用方針が決まったら [Render のドキュメント](https://render.com/docs/cronjobs) を参照してください。
+
+### デプロイ後
+
+Git に **`package-lock.json` が無い**場合、Docker ビルドで `npm install` が毎回走ります。安定させるにはローカルで `npm install` を実行し、生成された `package-lock.json` をコミットするとよいです。
+
+---
+
+## 11. 次のアクション（最短）
 
 1. 予算と「SSH の有無」「PHP 8.2 の可否」を決める  
 2. 上記 **4. の A〜C** から一つ選ぶ  
