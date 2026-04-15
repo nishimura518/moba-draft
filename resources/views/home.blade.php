@@ -32,7 +32,7 @@
         入室後「参加」でリーダーとなり、両チームのリーダーが揃ってから「開始」でドラフトを開始します。<br>
         間違えてリーダーになってしまった場合は、退出ボタンから退出してください。</p>
 
-        <form method="post" action="/rooms">
+        <form method="post" action="{{ route('rooms.store') }}">
             @csrf
             <div class="row">
                 <button class="btn primary" type="submit">部屋を作成して開始</button>
