@@ -36,7 +36,7 @@ class HomeController extends Controller
             'last_activity_at' => $now,
         ]);
 
-        return redirect()->to("/rooms/{$room->uuid}");
+        return redirect()->route('room.show', $room);
     }
 }
 

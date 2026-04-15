@@ -13,4 +13,5 @@ Route::post('/rooms', [HomeController::class, 'createRoom'])
     ->middleware('throttle:create-room')
     ->name('rooms.store');
 
-Route::get('/rooms/{room:uuid}', [RoomPageController::class, 'show']);
+Route::get('/rooms/{room:uuid}', [RoomPageController::class, 'show'])
+    ->name('room.show');
