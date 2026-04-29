@@ -219,12 +219,18 @@
   const startBtn = el('startBtn');
   const grid = el('grid');
 
+  const FETCH_TIMEOUT_MS = 20000;
+
   let state = {
     room: null,
     draft: null,
-    prevDraftKey: null,
     acting: false,
   };
+
+  /** 手番変更の中央トーストを同一状態で二度出さない（多重ポーリング対策） */
+  let lastDraftEventToastSig = null;
+
+  let refreshInFlight = null;
 
   function setToast(msg, isError=false){
     toastEl.textContent = msg || '';
@@ -250,11 +256,24 @@
   }
 
   async function api(path, opts={}){
-    const res = await fetch(path, {
-      ...opts,
-      credentials: 'same-origin',
-      headers: headers(opts.headers || {}),
-    });
+    const controller = new AbortController();
+    const tid = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    let res;
+    try {
+      res = await fetch(path, {
+        ...opts,
+        credentials: 'same-origin',
+        headers: headers(opts.headers || {}),
+        signal: controller.signal,
+      });
+    } catch (e) {
+      if (e && e.name === 'AbortError') {
+        throw new Error('通信がタイムアウトしました。ネットワークを確認してください。');
+      }
+      throw e;
+    } finally {
+      clearTimeout(tid);
+    }
     const text = await res.text();
     let json = null;
     try { json = text ? JSON.parse(text) : null; } catch(e) {}
@@ -301,7 +320,7 @@
       const s = String(id || '');
       const n = parseInt(s, 10);
       if (!Number.isFinite(n)) return 'damage';
-      const technical = new Set([1, 3, 8, 11, 19, 20, 21, 33]);
+      const technical = new Set([1, 3, 8, 11, 19, 20, 21, 33, 34]);
       const tank = new Set([5, 7, 12, 13, 17, 23, 24, 25, 27]);
       if (technical.has(n)) return 'technical';
       if (tank.has(n)) return 'tank';
@@ -468,28 +487,51 @@
     el('turnTimer').textContent = `残り時間: ${remaining}秒`;
   }
 
-  async function refreshAll(){
-    state.room = await api(`/api/rooms/${ROOM_UUID}`);
-    const prev = state.draft?.draft || null;
-    state.draft = await api(`/api/rooms/${ROOM_UUID}/draft`);
-    render();
-    updateTimer();
+  function refreshAll(){
+    if (refreshInFlight) return refreshInFlight;
+    refreshInFlight = (async () => {
+      try {
+        state.room = await api(`/api/rooms/${ROOM_UUID}`);
+        const prev = state.draft?.draft || null;
+        state.draft = await api(`/api/rooms/${ROOM_UUID}/draft`);
+        render();
+        updateTimer();
 
-    const cur = state.draft?.draft || null;
-    const prevKey = prev ? `${prev.status}:${prev.turn_index}` : null;
-    const curKey = cur ? `${cur.status}:${cur.turn_index}` : null;
-    if (prevKey && curKey && prevKey !== curKey) {
-      showCenterToast(el('nowTurnTitle').textContent, false, 2000);
-    } else if (
-      prev && cur
-      && prev.status === 'running'
-      && cur.status === 'running'
-      && prev.kami_lock_until
-      && !cur.kami_lock_until
-      && cur.next_action
-    ) {
-      showCenterToast(el('nowTurnTitle').textContent, false, 2000);
-    }
+        const cur = state.draft?.draft || null;
+        const prevKey = prev ? `${prev.status}:${prev.turn_index}` : null;
+        const curKey = cur ? `${cur.status}:${cur.turn_index}` : null;
+
+        const maybeToastTurnChange = () => {
+          const msg = el('nowTurnTitle').textContent;
+          const ver = cur?.version != null ? String(cur.version) : '';
+          const sig = `turn:${curKey}:v${ver}`;
+          if (lastDraftEventToastSig === sig) return;
+          lastDraftEventToastSig = sig;
+          showCenterToast(msg, false, 2000);
+        };
+
+        if (prevKey && curKey && prevKey !== curKey) {
+          maybeToastTurnChange();
+        } else if (
+          prev && cur
+          && prev.status === 'running'
+          && cur.status === 'running'
+          && prev.kami_lock_until
+          && !cur.kami_lock_until
+          && cur.next_action
+        ) {
+          const msg = el('nowTurnTitle').textContent;
+          const ver = cur?.version != null ? String(cur.version) : '';
+          const sig = `kami_end:v${ver}`;
+          if (lastDraftEventToastSig === sig) return;
+          lastDraftEventToastSig = sig;
+          showCenterToast(msg, false, 2000);
+        }
+      } finally {
+        refreshInFlight = null;
+      }
+    })();
+    return refreshInFlight;
   }
 
   async function join(){

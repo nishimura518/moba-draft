@@ -53,7 +53,7 @@ class DraftController extends Controller
     private const ROLE_TANK = 'tank';
     private const ROLE_DAMAGE = 'damage';
 
-    private const TECHNICAL_IDS = [1, 3, 8, 11, 19, 20, 21, 33];
+    private const TECHNICAL_IDS = [1, 3, 8, 11, 19, 20, 21, 33, 34];
     private const TANK_IDS = [5, 7, 12, 13, 17, 23, 24, 25, 27];
 
     public function start(Request $request, Room $room): JsonResponse
