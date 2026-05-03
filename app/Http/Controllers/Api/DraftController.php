@@ -16,37 +16,31 @@ use Symfony\Component\HttpFoundation\Response;
 
 class DraftController extends Controller
 {
-    private const BAN_PER_TEAM = 2;
+    private const BAN_PER_TEAM = 3;
     private const PICK_PER_TEAM = 4;
 
     /**
-     * Turn script:
-     * L ban
-     * R pick x2
-     * L ban, L pick
-     * R ban, R pick
-     * L pick x2
-     * R pick
-     * L pick
-     *
-     * Total: bans L2/R1? + picks L4/R4, but right ban count must be 2.
-     * This is implemented as a strict step list that totals:
-     * - bans: left 2, right 2
+     * Turn script (strict step list):
+     * - bans: left 3, right 3 (total 6)
      * - picks: left 4, right 4
+     *
+     * Flow: 左2BAN → 右2BAN → 左1BAN+1PICK → 右1BAN+1PICK → 左2PICK → 右2PICK → 左1PICK → 右1PICK
      */
     private const TURN_SCRIPT = [
         ['type' => 'ban', 'team' => 'left'],   // 1) 左 バン1
-        ['type' => 'ban', 'team' => 'right'],  // 2) 右 バン1
-        ['type' => 'ban', 'team' => 'right'],  // 3) 右 バン2
-        ['type' => 'ban', 'team' => 'left'],   // 4) 左 バン2
-        ['type' => 'pick', 'team' => 'left'],  // 5) 左 ピック1
-        ['type' => 'pick', 'team' => 'right'], // 6) 右 ピック1
-        ['type' => 'pick', 'team' => 'right'], // 7) 右 ピック2
-        ['type' => 'pick', 'team' => 'left'],  // 8) 左 ピック2
-        ['type' => 'pick', 'team' => 'left'],  // 9) 左 ピック3
-        ['type' => 'pick', 'team' => 'right'], // 10) 右 ピック3
-        ['type' => 'pick', 'team' => 'right'], // 11) 右 ピック4
-        ['type' => 'pick', 'team' => 'left'],  // 12) 左 ピック4
+        ['type' => 'ban', 'team' => 'left'],   // 2) 左 バン2
+        ['type' => 'ban', 'team' => 'right'],  // 3) 右 バン1
+        ['type' => 'ban', 'team' => 'right'],  // 4) 右 バン2
+        ['type' => 'ban', 'team' => 'left'],   // 5) 左 バン3
+        ['type' => 'pick', 'team' => 'left'],  // 6) 左 ピック1
+        ['type' => 'ban', 'team' => 'right'],  // 7) 右 バン3
+        ['type' => 'pick', 'team' => 'right'], // 8) 右 ピック1
+        ['type' => 'pick', 'team' => 'left'],  // 9) 左 ピック2
+        ['type' => 'pick', 'team' => 'left'],  // 10) 左 ピック3
+        ['type' => 'pick', 'team' => 'right'], // 11) 右 ピック2
+        ['type' => 'pick', 'team' => 'right'], // 12) 右 ピック3
+        ['type' => 'pick', 'team' => 'left'],  // 13) 左 ピック4
+        ['type' => 'pick', 'team' => 'right'], // 14) 右 ピック4
     ];
 
     private const ROLE_TECHNICAL = 'technical';

@@ -34,7 +34,17 @@
         .pill strong{ font-size:13px; }
         .pill span{ font-size:12px; color:var(--muted); }
         .small{ font-size:12px; color:var(--muted); }
-        .timerBig{ font-size:28px; font-weight:800; color:var(--text); letter-spacing:.02em; margin-top:4px; }
+        .statusBig{
+            font-size:28px;
+            font-weight:800;
+            letter-spacing:.02em;
+            line-height:1.25;
+            margin:0;
+        }
+        .turnLine{ color:var(--text); transition: color .2s ease; }
+        .turnLine--neutral{ color:var(--text); }
+        .turnLine--mine{ color:#93c5fd; }
+        .turnLine--opp{ color:#fca5a5; }
         .hr{ height:1px; background:rgba(255,255,255,.08); margin:12px 0; }
         .toast{ min-height:18px; font-size:12px; color:var(--muted); }
         .toast.error{ color: var(--danger); }
@@ -45,8 +55,17 @@
         .draftRow{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
         .draftTags{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
         .spanAll{ grid-column: 1 / -1; }
-        .topBlock{ min-height: 240px; display:flex; flex-direction:column; }
-        .topGrow{ flex:1; }
+        .topBlock{ display:flex; flex-direction:column; }
+        .topGrow{ flex:1; min-height:0; }
+        .sidebarCol{ display:flex; flex-direction:column; align-self:stretch; min-height:0; }
+        .sidebarCol .topBlock{ flex:0 0 auto; }
+        .sidebarCol .teamBlock{
+            flex:1 1 auto;
+            display:flex;
+            flex-direction:column;
+            min-height:0;
+        }
+        .sidebarCol .teamBlock .list{ flex:1 1 auto; }
         @media (max-width: 1200px){ .wrap{ grid-template-columns: 1fr; } .spanAll{ grid-column: 1; } .grid{ grid-template-columns: repeat(6, minmax(0, 1fr)); } }
         .ruleList{ display:grid; gap:10px; }
         .ruleItem{ padding:10px; border-radius:12px; border:1px solid rgba(255,255,255,.10); background:rgba(255,255,255,.03); }
@@ -76,11 +95,40 @@
             background: rgba(127,29,29,.92);
             color: #ffe4e6;
         }
+        .yourTurnBanner{
+            position: fixed;
+            left: 50%;
+            top: 40%;
+            z-index: 10000;
+            pointer-events: none;
+            padding: 22px 40px;
+            border-radius: 16px;
+            font-weight: 800;
+            font-size: clamp(24px, 4.2vw, 40px);
+            letter-spacing: .08em;
+            color: #f8fafc;
+            background: linear-gradient(155deg, #1d4ed8 0%, #0f172a 50%, #1e1b4b 100%);
+            border: 2px solid rgba(125, 211, 252, 0.95);
+            box-shadow:
+                0 24px 56px rgba(0,0,0,.55),
+                0 0 48px rgba(37, 99, 235, .4),
+                inset 0 1px 0 rgba(255,255,255,.12);
+            text-shadow: 0 2px 10px rgba(0,0,0,.5);
+            opacity: 0;
+            transform: translate(-50%, calc(-50% + 28px));
+            transition:
+                opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+                transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .yourTurnBanner.visible{
+            opacity: 1;
+            transform: translate(-50%, -50%);
+        }
     </style>
 </head>
 <body>
 <div class="wrap">
-    <aside class="panel">
+    <aside class="panel sidebarCol">
         <div class="topBlock">
             <p class="title" id="youTitle" style="margin:0;">未参加</p>
             <div class="row" style="justify-content:flex-start; align-items:center; margin-top:10px;">
@@ -101,15 +149,17 @@
             <div class="topGrow"></div>
             <div class="hr"></div>
         </div>
-        <p class="title">左チーム</p>
-        <div class="list">
-            <div>
-                <div class="small">バン</div>
-                <div class="imgrow" id="leftBansRow"></div>
-            </div>
-            <div>
-                <div class="small">ピック</div>
-                <div class="imgrow" id="leftPicksRow"></div>
+        <div class="teamBlock">
+            <p class="title">左チーム</p>
+            <div class="list">
+                <div>
+                    <div class="small">BAN</div>
+                    <div class="imgrow" id="leftBansRow"></div>
+                </div>
+                <div>
+                    <div class="small">PICK</div>
+                    <div class="imgrow" id="leftPicksRow"></div>
+                </div>
             </div>
         </div>
     </aside>
@@ -127,25 +177,28 @@
         </div>
     </main>
 
-    <aside class="panel">
+    <aside class="panel sidebarCol">
         <div class="topBlock">
-            <p class="title" id="nowTurnTitle">現在の手番: -</p>
-            <div class="timerBig" id="turnTimer">残り時間: -</div>
+            <p class="statusBig turnLine turnLine--neutral" id="nowTurnTitle">現在の手番: -</p>
+            <div class="hr"></div>
+            <div class="statusBig" id="turnTimer">残り時間: -</div>
             <div class="hr"></div>
             <p class="title">カミドロー</p>
             <div class="imgrow" id="kamiRow"></div>
             <div class="topGrow"></div>
             <div class="hr"></div>
         </div>
-        <p class="title">右チーム</p>
-        <div class="list">
-            <div>
-                <div class="small">バン</div>
-                <div class="imgrow" id="rightBansRow"></div>
-            </div>
-            <div>
-                <div class="small">ピック</div>
-                <div class="imgrow" id="rightPicksRow"></div>
+        <div class="teamBlock">
+            <p class="title">右チーム</p>
+            <div class="list">
+                <div>
+                    <div class="small">BAN</div>
+                    <div class="imgrow" id="rightBansRow"></div>
+                </div>
+                <div>
+                    <div class="small">PICK</div>
+                    <div class="imgrow" id="rightPicksRow"></div>
+                </div>
             </div>
         </div>
     </aside>
@@ -165,23 +218,19 @@
             </div>
             <div class="ruleItem">
                 <strong>枠数</strong>
-                <div>バン：各チーム2枠
-ピック：各チーム4枠</div>
+                <div>BAN：各チーム3枠
+PICK：各チーム4枠</div>
             </div>
             <div class="ruleItem">
                 <strong>順番（固定）</strong>
-                <div>1) 左 バン1
-2) 右 バン1
-    右 バン2
-3) 左 バン2
-    左 ピック1
-4) 右 ピック1
-    右 ピック2
-5) 左 ピック2
-    左 ピック3
-6) 右 ピック3
-    右 ピック4
-7) 左 ピック4</div>
+                <div>1) 左 BAN1・左 BAN2
+2) 右 BAN1・右 BAN2
+3) 左 BAN3・左 PICK1
+4) 右 BAN3・右 PICK1
+5) 左 PICK2・左 PICK3
+6) 右 PICK2・右 PICK3
+7) 左 PICK4
+8) 右 PICK4</div>
             </div>
             <div class="ruleItem">
                 <strong>注意</strong>
@@ -196,6 +245,7 @@
     </section>
 </div>
 
+<div class="yourTurnBanner" id="yourTurnBanner" aria-live="polite"></div>
 <div class="toastCenter" id="toastCenter">リンクをコピーしました</div>
 
 <script>
@@ -232,6 +282,21 @@
 
   let refreshInFlight = null;
 
+  /** 現在の手番表示の色（自チーム＝青 / 相手チーム＝赤 / それ以外＝通常） */
+  function syncTurnLineStyle(){
+    const title = el('nowTurnTitle');
+    if (!title) return;
+    title.classList.remove('turnLine--neutral', 'turnLine--mine', 'turnLine--opp');
+    const you = state.room?.you || null;
+    const d = state.draft?.draft || null;
+    if (!d || d.status !== 'running' || d.kami_lock_until || !d.next_action || !you) {
+      title.classList.add('turnLine--neutral');
+      return;
+    }
+    if (you.team === d.next_action.team) title.classList.add('turnLine--mine');
+    else title.classList.add('turnLine--opp');
+  }
+
   function setToast(msg, isError=false){
     toastEl.textContent = msg || '';
     toastEl.classList.toggle('error', !!isError);
@@ -246,6 +311,30 @@
     toastCenterTimer = setTimeout(() => {
       toastCenterEl.classList.remove('show');
     }, durationMs);
+  }
+
+  let yourTurnBannerTimer = null;
+  let yourTurnBannerHideTimer = null;
+  function showYourTurnBanner(actionType){
+    const b = el('yourTurnBanner');
+    if (!b) return;
+    const label = actionType === 'ban' ? 'BAN' : 'PICK';
+    const msg = `貴方の${label}です`;
+    if (yourTurnBannerTimer) clearTimeout(yourTurnBannerTimer);
+    if (yourTurnBannerHideTimer) clearTimeout(yourTurnBannerHideTimer);
+    b.textContent = msg;
+    b.classList.remove('visible');
+    void b.offsetWidth;
+    requestAnimationFrame(() => b.classList.add('visible'));
+    yourTurnBannerTimer = setTimeout(() => {
+      b.classList.remove('visible');
+      yourTurnBannerHideTimer = setTimeout(() => { b.textContent = ''; }, 560);
+    }, 2600);
+  }
+
+  function isMyActingTurn(you, d){
+    return !!(d && d.status === 'running' && d.next_action && !d.kami_lock_until
+      && you && you.is_leader && you.team === d.next_action.team);
   }
 
   function headers(extra={}){
@@ -328,8 +417,8 @@
     };
     const phaseJa = (p) => {
       if (!p) return '-';
-      if (p === 'ban') return 'バン';
-      if (p === 'pick') return 'ピック';
+      if (p === 'ban') return 'BAN';
+      if (p === 'pick') return 'PICK';
       if (p === 'kami') return 'カミドロー';
       if (p === 'done') return '完了';
       return p;
@@ -352,19 +441,21 @@
       el('turnTimer').textContent = '残り時間: -';
       el('turnTag').textContent = 'ターン: -';
     } else if (d?.next_action) {
-      const teamJa = d.next_action.team === 'left' ? '左チーム' : '右チーム';
-      el('turnTag').textContent = `ターン: ${teamJa}`;
-      const typeJa = d.next_action.type === 'ban' ? 'バン' : 'ピック';
-      const num = (() => {
-        if (d.next_action.type === 'ban') {
-          return d.next_action.team === 'left'
-            ? (d.left_bans?.length ?? 0) + 1
-            : (d.right_bans?.length ?? 0) + 1;
-        }
-        const picks = d.next_action.team === 'left' ? (d.left_picks || []) : (d.right_picks || []);
-        return picks.filter(x => x !== '__SKIP__').length + 1;
-      })();
-      el('nowTurnTitle').textContent = `現在の手番: ${teamJa}/${typeJa}${num}`;
+      const typeJa = d.next_action.type === 'ban' ? 'BAN' : 'PICK';
+      let turnLine;
+      let tagLine;
+      if (!you) {
+        turnLine = `現在の手番: ${typeJa}`;
+        tagLine = 'ターン: -';
+      } else if (you.team === d.next_action.team) {
+        turnLine = `現在の手番: 貴方のチームの${typeJa}`;
+        tagLine = 'ターン: 貴方のチーム';
+      } else {
+        turnLine = `現在の手番: 相手のチームの${typeJa}`;
+        tagLine = 'ターン: 相手のチーム';
+      }
+      el('turnTag').textContent = tagLine;
+      el('nowTurnTitle').textContent = turnLine;
     } else if (d.kami_lock_until) {
       el('turnTag').textContent = 'ターン: -';
       el('nowTurnTitle').textContent = '現在の手番: （カミドロー表示中）';
@@ -460,6 +551,8 @@
 
     startBtn.disabled = state.acting || !(you && you.is_leader) || (d && d.status === 'completed');
     joinBtn.disabled = state.acting || !!you;
+
+    syncTurnLineStyle();
   }
 
   function updateTimer(){
@@ -500,18 +593,17 @@
         const cur = state.draft?.draft || null;
         const prevKey = prev ? `${prev.status}:${prev.turn_index}` : null;
         const curKey = cur ? `${cur.status}:${cur.turn_index}` : null;
-
-        const maybeToastTurnChange = () => {
-          const msg = el('nowTurnTitle').textContent;
-          const ver = cur?.version != null ? String(cur.version) : '';
-          const sig = `turn:${curKey}:v${ver}`;
-          if (lastDraftEventToastSig === sig) return;
-          lastDraftEventToastSig = sig;
-          showCenterToast(msg, false, 2000);
-        };
+        const you = state.room?.you || null;
 
         if (prevKey && curKey && prevKey !== curKey) {
-          maybeToastTurnChange();
+          if (isMyActingTurn(you, cur)) {
+            const ver = cur?.version != null ? String(cur.version) : '';
+            const sig = `yourTurn:${curKey}:v${ver}`;
+            if (lastDraftEventToastSig !== sig) {
+              lastDraftEventToastSig = sig;
+              showYourTurnBanner(cur.next_action.type);
+            }
+          }
         } else if (
           prev && cur
           && prev.status === 'running'
@@ -520,12 +612,14 @@
           && !cur.kami_lock_until
           && cur.next_action
         ) {
-          const msg = el('nowTurnTitle').textContent;
-          const ver = cur?.version != null ? String(cur.version) : '';
-          const sig = `kami_end:v${ver}`;
-          if (lastDraftEventToastSig === sig) return;
-          lastDraftEventToastSig = sig;
-          showCenterToast(msg, false, 2000);
+          if (isMyActingTurn(you, cur)) {
+            const ver = cur?.version != null ? String(cur.version) : '';
+            const sig = `yourTurn_kami:${curKey}:v${ver}`;
+            if (lastDraftEventToastSig !== sig) {
+              lastDraftEventToastSig = sig;
+              showYourTurnBanner(cur.next_action.type);
+            }
+          }
         }
       } finally {
         refreshInFlight = null;
@@ -589,7 +683,16 @@
   }
 
   leaveBtn.addEventListener('click', async () => {
-    try { setToast(''); await leave(); } catch(e){ setToast(e.message, true); }
+    try {
+      setToast('');
+      if (state.room?.you) {
+        await leave();
+      } else {
+        window.location.href = '/';
+      }
+    } catch (e) {
+      setToast(e.message, true);
+    }
   });
   shareBtn.addEventListener('click', async () => {
     try {
